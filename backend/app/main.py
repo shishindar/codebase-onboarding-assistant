@@ -1,6 +1,7 @@
 import subprocess
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl, Field
+from backend.app.retrieval.hybrid_search import hybrid_search
 
 from backend.app.ingestion.repository_manager import clone_repository
 from backend.app.retrieval.search_service import search_code
@@ -85,3 +86,21 @@ def semantic_search(request: SearchRequest):
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
+@app.post("/api/hybrid-search")
+def hybrid_search_endpoint(request: SearchRequest):
+
+    try:
+        results = hybrid_search(
+            query=request.query,
+            repository=request.repository,
+            top_k=request.top_k
+        )
+
+        return {
+            "success": True,
+            "total_results": len(results),
+            "results": results
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
