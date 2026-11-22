@@ -1,8 +1,9 @@
 import subprocess
-from pydantic import BaseModel, HttpUrl
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, HttpUrl, Field
+
 from backend.app.ingestion.repository_manager import clone_repository
-from fastapi import FastAPI
+from backend.app.retrieval.search_service import search_code
 
 app = FastAPI(
     title="Codebase Onboarding Assistant",
@@ -54,3 +55,33 @@ def clone_repo(request: RepositoryRequest):
 
     except RuntimeError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+    
+from pydantic import BaseModel, Field
+
+
+class SearchRequest(BaseModel):
+    query: str
+    repository: str | None = None
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
+@app.post("/api/search")
+def semantic_search(request: SearchRequest):
+
+    try:
+        results = search_code(
+            query=request.query,
+            repository=request.repository,
+            top_k=request.top_k
+        )
+
+        return {
+            "success": True,
+            "total_results": len(results),
+            "results": results
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
